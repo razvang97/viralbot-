@@ -280,6 +280,10 @@ if __name__ == "__main__":
     
     setup_schedule()
     
+    # Run first video immediately on startup
+    print("\n🚀 Running first video immediately...")
+    create_and_post_video(0)
+    
     print("\n✅ Bot is running! Waiting for scheduled times...")
     print("Press Ctrl+C to stop.\n")
     
