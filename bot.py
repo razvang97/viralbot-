@@ -104,15 +104,13 @@ def generate_voice(script: str, output_path: str) -> str:
     return output_path
 
 # ─── STEP 3: GENERATE VIDEO (RUNWAY) ──────────────────────
-def get_unsplash_image(query: str) -> str:
-    """Get a free stock image URL from Unsplash for Runway input"""
-    # Use Unsplash Source API - no key needed, returns direct image URL
-    clean_query = query.replace(" ", ",")
-    image_url = f"https://source.unsplash.com/720x1280/?{clean_query}"
-    
-    # Resolve redirect to get actual image URL
-    response = requests.get(image_url, allow_redirects=True)
-    return response.url
+def get_unsplash_image() -> str:
+    """Download stock image and convert to base64 for Runway"""
+    import base64
+    image_url = "https://images.unsplash.com/photo-1579621970563-ebec7560ff3e?w=720&h=1280&fit=crop"
+    response = requests.get(image_url)
+    b64 = base64.b64encode(response.content).decode("utf-8")
+    return f"data:image/jpeg;base64,{b64}"
 
 def generate_video(visual_prompt: str, output_path: str) -> str:
     print(f"  🎬 Generating video with Runway ML...")
@@ -125,15 +123,15 @@ def generate_video(visual_prompt: str, output_path: str) -> str:
     
     # Get free stock image for Runway input
     print(f"  🖼️ Getting stock image...")
-    image_url = get_unsplash_image("money,finance,wealth,business")
-    print(f"  ✅ Image URL: {image_url}")
+    image_b64 = get_unsplash_image()
+    print(f"  ✅ Image ready as base64")
     
     create_resp = requests.post(
         "https://api.dev.runwayml.com/v1/image_to_video",
         headers=headers,
         json={
             "model": "gen4_turbo",
-            "promptImage": image_url,
+            "promptImage": image_b64,
             "promptText": visual_prompt + " Cinematic motion. Photorealistic.",
             "ratio": "720:1280",
             "duration": 10,
