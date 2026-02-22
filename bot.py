@@ -197,50 +197,71 @@ def merge_audio_video(video_path: str, audio_path: str, output_path: str) -> str
     return output_path
 
 # ─── STEP 5: POST TO TIKTOK + INSTAGRAM ───────────────────
-def post_video(video_path: str, description: str, hashtags: str, schedule_time: str = None) -> bool:
+def post_video(video_path: str, description: str, hashtags: str) -> bool:
     print(f"  📤 Posting to TikTok + Instagram via Publer...")
     
     profile_ids = [p.strip() for p in PUBLER_PROFILES.split(",")]
     caption = f"{description}\n\n{hashtags}"
     
-    headers = {"Authorization": f"Bearer {PUBLER_KEY}"}
+    headers = {
+        "Authorization": f"Bearer-API {PUBLER_KEY}",
+        "Accept": "*/*"
+    }
     
-    # Upload video file first
+    # Step 1: Upload video file
+    print(f"  📁 Uploading video...")
     with open(video_path, "rb") as f:
         upload_resp = requests.post(
-            "https://app.publer.io/api/v1/media/upload",
+            "https://app.publer.com/api/v1/media",
             headers=headers,
-            files={"file": (os.path.basename(video_path), f, "video/mp4")}
+            files={"file": (os.path.basename(video_path), f, "video/mp4")},
+            data={"direct_upload": "false", "in_library": "false"}
         )
     
     if upload_resp.status_code not in [200, 201]:
         raise Exception(f"Publer upload error: {upload_resp.text}")
     
-    media_id = upload_resp.json().get("id") or upload_resp.json().get("media_id")
+    media = upload_resp.json()
+    media_id = media.get("id")
+    thumbnails = media.get("thumbnails", [])
     print(f"  ✅ Media uploaded: {media_id}")
     
-    # Create post for each profile (TikTok + Instagram)
-    for profile_id in profile_ids:
-        post_data = {
-            "profile_ids": [profile_id],
-            "text": caption,
-            "media_ids": [media_id],
-        }
-        
-        if schedule_time:
-            post_data["scheduled_at"] = schedule_time
-        
-        post_resp = requests.post(
-            "https://app.publer.io/api/v1/post",
-            headers={**headers, "Content-Type": "application/json"},
-            json=post_data
-        )
-        
-        if post_resp.status_code not in [200, 201]:
-            print(f"  ⚠️ Publer post error for {profile_id}: {post_resp.text}")
-        else:
-            print(f"  ✅ Posted to profile: {profile_id}")
+    # Step 2: Create post for TikTok + Instagram
+    accounts = [{"id": pid} for pid in profile_ids]
     
+    post_payload = {
+        "bulk": {
+            "state": "scheduled",
+            "posts": [
+                {
+                    "networks": {
+                        "tiktok": {
+                            "type": "video",
+                            "media": [{"id": media_id, "thumbnails": thumbnails, "title": "Finance Tip", "default_thumbnail": 0}],
+                            "text": caption
+                        },
+                        "instagram": {
+                            "type": "reel",
+                            "media": [{"id": media_id, "thumbnails": thumbnails, "title": "Finance Tip", "default_thumbnail": 0}],
+                            "text": caption
+                        }
+                    },
+                    "accounts": accounts
+                }
+            ]
+        }
+    }
+    
+    post_resp = requests.post(
+        "https://app.publer.com/api/v1/posts/schedule",
+        headers={**headers, "Content-Type": "application/json"},
+        json=post_payload
+    )
+    
+    if post_resp.status_code not in [200, 201]:
+        raise Exception(f"Publer post error: {post_resp.text}")
+    
+    print(f"  ✅ Posted successfully to TikTok + Instagram!")
     return True
 
 # ─── MAIN PIPELINE ────────────────────────────────────────
