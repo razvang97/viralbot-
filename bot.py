@@ -104,27 +104,39 @@ def generate_voice(script: str, output_path: str) -> str:
     return output_path
 
 # ─── STEP 3: GENERATE VIDEO (RUNWAY) ──────────────────────
+def get_unsplash_image(query: str) -> str:
+    """Get a free stock image URL from Unsplash for Runway input"""
+    # Use Unsplash Source API - no key needed, returns direct image URL
+    clean_query = query.replace(" ", ",")
+    image_url = f"https://source.unsplash.com/720x1280/?{clean_query}"
+    
+    # Resolve redirect to get actual image URL
+    response = requests.get(image_url, allow_redirects=True)
+    return response.url
+
 def generate_video(visual_prompt: str, output_path: str) -> str:
     print(f"  🎬 Generating video with Runway ML...")
     
-    # Create generation task
     headers = {
         "Authorization": f"Bearer {RUNWAY_KEY}",
         "Content-Type": "application/json",
         "X-Runway-Version": "2024-11-06"
     }
     
+    # Get free stock image for Runway input
+    print(f"  🖼️ Getting stock image...")
+    image_url = get_unsplash_image("money,finance,wealth,business")
+    print(f"  ✅ Image URL: {image_url}")
+    
     create_resp = requests.post(
-        "https://api.dev.runwayml.com/v1/tasks",
+        "https://api.dev.runwayml.com/v1/image_to_video",
         headers=headers,
         json={
-            "taskType": "text_to_video",
-            "model": "gen3a_turbo",
-            "options": {
-                "promptText": visual_prompt + " Vertical 9:16 format. Cinematic. Photorealistic. No text overlays.",
-                "ratio": "720:1280",
-                "duration": 10,
-            }
+            "model": "gen4_turbo",
+            "promptImage": image_url,
+            "promptText": visual_prompt + " Cinematic motion. Photorealistic.",
+            "ratio": "720:1280",
+            "duration": 10,
         }
     )
     
