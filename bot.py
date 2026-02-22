@@ -115,13 +115,16 @@ def generate_video(visual_prompt: str, output_path: str) -> str:
     }
     
     create_resp = requests.post(
-        "https://api.dev.runwayml.com/v1/text_to_video",
+        "https://api.dev.runwayml.com/v1/tasks",
         headers=headers,
         json={
+            "taskType": "text_to_video",
             "model": "gen3a_turbo",
-            "promptText": visual_prompt + " Vertical 9:16 format. Cinematic. Photorealistic. No text overlays.",
-            "ratio": "720:1280",
-            "duration": 10,
+            "options": {
+                "promptText": visual_prompt + " Vertical 9:16 format. Cinematic. Photorealistic. No text overlays.",
+                "ratio": "720:1280",
+                "duration": 10,
+            }
         }
     )
     
